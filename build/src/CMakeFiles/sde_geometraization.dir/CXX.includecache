@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../../autodiff/autodiff/forward.hpp
+autodiff/forward/forward.hpp
+-
+
+../../autodiff/autodiff/forward/forward.hpp
+cmath
+-
+functional
+-
+tuple
+-
+type_traits
+-
+utility
+-
+
+/home/morimoto/Public/GitHub/QuantsCpp/sde_geometrization/src/main.cpp
+iostream
+-
+autodiff/forward.hpp
+-
+

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsde_geometrization.a  CMakeFiles/sde_geometrization.dir/main.cpp.o
+/usr/bin/ranlib libsde_geometrization.a

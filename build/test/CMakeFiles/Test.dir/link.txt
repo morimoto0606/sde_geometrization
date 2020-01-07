@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/Test.dir/sample.cpp.o  -o Test   -L/home/morimoto/googletest/googletest/build  -Wl,-rpath,/home/morimoto/googletest/googletest/build -lgtest -lgtest_main -lpthread 
