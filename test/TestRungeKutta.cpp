@@ -1,9 +1,12 @@
 #include <gtest/gtest.h>
 #include <functional>
 #include <iostream>
-#include <Eigen/Dense>
+#include <Eigen/Core>
 #include <autodiff/reverse.hpp>
+#include <autodiff/reverse/eigen.hpp>
 #include "../src/RungeKutta.hpp"
+#include "../src/sde.h"
+#include <codi.hpp>
 
 using namespace std;
 using namespace Eigen;
@@ -13,78 +16,233 @@ using namespace autodiff;
 class RungeKuttaTest : public ::testing::Test {
 public:
     virtual void SetUp() {
-        _a = 1.0;
-        _vecField = [this](double x){return _a * x;};
+        _a << 0.,0.,0.,
+              1.,0.,0.,
+              2.,3.,0.;
+
+        _h = 0.1;
+
     }
-    double _a;
-    std::function<double(double)> _vecField;
+    Matrix3d _a;
+    double _h;
 };
 
-TEST_F(RungeKuttaTest, Exp) {
-    double x = 3.0;
-    double expected = _a * x;
-    double actual = _vecField(x);
-    EXPECT_EQ(expected, actual);
-}
+//TEST_F(RungeKuttaTest, exp) {
+//    sde::RungeKutta5<autodiff::var, 3> rk;
+//    auto vecField = [this](const Eigen::Matrix<autodiff::var, 3, 1>& x){return _a * x;};
+//    Eigen::VectorXvar x(3);
+//    x << 3.,2.,1.;   
+//    auto actual = rk.solve(_h, vecField, x);
+//
+//    Eigen::Vector3d y;
+//    y << 3.,2.,1.;   
+// 
+//    auto expected = (Eigen::MatrixXd::Identity(3,3)
+//        + _h * _a + 0.5 * _h * _h * _a * _a) * y;
+//
+//    for (int i = 0; i < 3; ++i) {
+//        EXPECT_NEAR(expected(i, 0), static_cast<double>(actual(i, 0)), 1e-4);
+//    }
+//    
+//}
+//
+//TEST_F(RungeKuttaTest, expDiff) {
+//    sde::RungeKutta5<autodiff::var, 3> rk;
+//    auto vecField = [this](const Eigen::Matrix<autodiff::var, 3, 1>& x){return _a * x;};
+//    Eigen::VectorXvar x(3);
+//    x << 3.,2.,1.;   
+//
+//    auto u = rk.solve(_h, vecField, x);
+//
+//    auto grad1 = autodiff::gradient(u(0,0), x);
+//    auto grad2 = autodiff::gradient(u(1,0), x);
+//    auto grad3 = autodiff::gradient(u(2,0), x);
+//
+//    Eigen::Matrix3d actual;
+//    actual.row(0) = grad1;
+//    actual.row(1) = grad2;
+//    actual.row(2) = grad3;
+//    
+//
+//    Eigen::Vector3d y;
+//    y << 3.,2.,1.;   
+//    
+//    Eigen::Vector3d y1p;
+//    y1p << 3.+0.001,2.,1.;   
+//    Eigen::Vector3d y1m;
+//    y1m << 3.-0.001,2.,1.;   
+//
+//    Eigen::Vector3d y2p;
+//    y2p << 3.,2.+0.001,1.;   
+//    Eigen::Vector3d y2m;
+//    y2m << 3.,2.-0.001,1.;   
+//
+//    Eigen::Vector3d y3p;
+//    y3p << 3.,2.,1.+0.001;   
+//    Eigen::Vector3d y3m;
+//    y3m << 3.,2.,1.-0.001;   
+//
+//
+//    auto x1p = (Eigen::MatrixXd::Identity(3,3)
+//        + _h * _a + 0.5 * _h * _h * _a * _a) * y1p;
+//
+//    auto x1m = (Eigen::MatrixXd::Identity(3,3)
+//        + _h * _a + 0.5 * _h * _h * _a * _a) * y1m;
+//
+//    auto x2p = (Eigen::MatrixXd::Identity(3,3)
+//        + _h * _a + 0.5 * _h * _h * _a * _a) * y2p;
+//
+//    auto x2m = (Eigen::MatrixXd::Identity(3,3)
+//        + _h * _a + 0.5 * _h * _h * _a * _a) * y2m;
+//
+//    auto x3p = (Eigen::MatrixXd::Identity(3,3)
+//        + _h * _a + 0.5 * _h * _h * _a * _a) * y3p;
+//
+//    auto x3m = (Eigen::MatrixXd::Identity(3,3)
+//        + _h * _a + 0.5 * _h * _h * _a * _a) * y3m;
+//
+//    auto expected1 = (x1p - x1m) / 0.002;
+//    auto expected2 = (x2p - x2m) / 0.002;
+//    auto expected3 = (x3p - x3m) / 0.002;
+//
+//    Eigen::Matrix3d expected;
+//    expected.col(0) = expected1;
+//    expected.col(1) = expected2;
+//    expected.col(2) = expected3;
+//
+//
+//
+//    for (int i = 0; i < 3; ++i) {
+//        for (int j = 0; j < 3; ++j) {
+//            EXPECT_NEAR(expected(i, j), actual(i, j), 1e-4);
+//        }
+//    }
+//    
+//}
 
-TEST_F(RungeKuttaTest, ExpMatrix) {
-  Eigen::MatrixXd m = Eigen::MatrixXd::Random(3,3);
-  m = (m + Eigen::MatrixXd::Constant(3,3,1.2)) * 50;
-  cout << "m =" << endl << m << endl;
-  VectorXd v(3);
-  v << 1, 2, 3;
-  cout << "m * v =" << endl << m * v << endl;
-}
+TEST_F(RungeKuttaTest, expDiffIterative) {
+    sde::RungeKutta5<codi::RealReverse, 3> rk;
 
-TEST_F(RungeKuttaTest, hoge) {
-    var x = 1.0;                                 // the input variable x
-    var y = 0.5;                                 // the input variable y
-    var z = 2.0;                                 // the input variable z
+    Eigen::Matrix<codi::RealReverse, 3, 3> a;
+    a << 0.,0.,0.,
+         1.,0.,0.,
+         2.,3.,0.;
 
-    var u = x * log(y) * exp(z);                 // the output variable u
+    const codi::RealReverse h = 0.01;
 
-    DerivativesX dud = derivativesx(u);          // evaluate all derivatives of u using autodiff::derivativesx!
+    auto vecField = [this, &a](const Eigen::Matrix<codi::RealReverse, 3, 1>& x){return a * x;};
+    auto vecFieldPtr = std::make_shared<const sde::function_type<codi::RealReverse, 3>>(vecField);
+ 
+    std::vector<sde::func_ptr_type<codi::RealReverse, 3>> vecFields;
+    for (int i =0; i < 2; ++i) {
+        vecFields.emplace_back(vecFieldPtr);
+    }
 
-    var dudx = dud(x);                           // extract the first order derivative du/dx of type var, not double!
-    var dudy = dud(y);                           // extract the first order derivative du/dy of type var, not double!
-    var dudz = dud(z);                           // extract the first order derivative du/dz of type var, not double!
+    sde::vector_type<codi::RealReverse, 3> x;
+    x << 3.,2.,1.;   
 
-    DerivativesX d2udxd = derivativesx(dudx);    // evaluate all derivatives of dudx using autodiff::derivativesx!
-    DerivativesX d2udyd = derivativesx(dudy);    // evaluate all derivatives of dudy using autodiff::derivativesx!
-    DerivativesX d2udzd = derivativesx(dudz);    // evaluate all derivatives of dudz using autodiff::derivativesx!
+    codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+    tape.setActive();
+    for(size_t i = 0; i < 3; ++i) {
+      tape.registerInput(x(i, 0));
+    }
+    auto y = rk.solveIterative(h, vecFields, x);
+ 
+    tape.registerOutput(y(0,0));
+    tape.registerOutput(y(1,0));
+    tape.registerOutput(y(2,0));
+ 
+    tape.setPassive();
+    std::cout << "f(1 .. 5) = (" << y(0,0) << ", " << y(1,0) << "," << y(2,0) << ")" << std::endl;
+    y(0,0).setGradient(1.0);
+    tape.evaluate();
+    std::cout << "df_1/dx(1 .. 5) = (";
+    for(size_t i = 0; i < 3; ++i) {
+      if(0 != i) {
+        std::cout << ", ";
+      }
+      std::cout << x(i,0).getGradient();
+    }
+    std::cout << ")" << std::endl;
+    tape.clearAdjoints();
 
-    var d2udxdx = d2udxd(x);                     // extract the second order derivative d2u/dxdx of type var, not double!
-    var d2udxdy = d2udxd(y);                     // extract the second order derivative d2u/dxdy of type var, not double!
-    var d2udxdz = d2udxd(z);                     // extract the second order derivative d2u/dxdz of type var, not double!
+    y(1,0).setGradient(1.0);
+    tape.evaluate();
+    std::cout << "df_2/dx(1 .. 5) = (";
+    for(size_t i = 0; i < 3; ++i) {
+      if(0 != i) {
+        std::cout << ", ";
+      }
+      std::cout << x(i,0).getGradient();
+    }
+    std::cout << ")" << std::endl;
+    tape.clearAdjoints();
 
-    var d2udydx = d2udyd(x);                     // extract the second order derivative d2u/dydx of type var, not double!
-    var d2udydy = d2udyd(y);                     // extract the second order derivative d2u/dydy of type var, not double!
-    var d2udydz = d2udyd(z);                     // extract the second order derivative d2u/dydz of type var, not double!
+    y(2,0).setGradient(1.0);
+    tape.evaluate();
+    std::cout << "df_3/dx(1 .. 5) = (";
+    for(size_t i = 0; i < 3; ++i) {
+      if(0 != i) {
+        std::cout << ", ";
+      }
+      std::cout << x(i,0).getGradient();
+    }
+    std::cout << ")" << std::endl;
+    tape.clearAdjoints();
 
-    var d2udzdx = d2udzd(x);                     // extract the second order derivative d2u/dzdx of type var, not double!
-    var d2udzdy = d2udzd(y);                     // extract the second order derivative d2u/dzdy of type var, not double!
-    var d2udzdz = d2udzd(z);                     // extract the second order derivative d2u/dzdz of type var, not double!
+ 
+    //Eigen::Vector3d y;
+    //y << 3.,2.,1.;   
+    
+    //Eigen::Vector3d y1p;
+    //y1p << 3.+0.001,2.,1.;   
+    //Eigen::Vector3d y1m;
+    //y1m << 3.-0.001,2.,1.;   
 
-    cout << "u = " << u << endl;                 // print the evaluated output variable u
+    //Eigen::Vector3d y2p;
+    //y2p << 3.,2.+0.001,1.;   
+    //Eigen::Vector3d y2m;
+    //y2m << 3.,2.-0.001,1.;   
 
-    cout << "du/dx = " << dudx << endl;          // print the evaluated first order derivative du/dx
-    cout << "du/dy = " << dudy << endl;          // print the evaluated first order derivative du/dy
-    cout << "du/dz = " << dudz << endl;          // print the evaluated first order derivative du/dz
+    //Eigen::Vector3d y3p;
+    //y3p << 3.,2.,1.+0.001;   
+    //Eigen::Vector3d y3m;
+    //y3m << 3.,2.,1.-0.001;   
 
-    cout << "d2udxdx = " << d2udxdx << endl;     // print the evaluated second order derivative d2u/dxdx
-    cout << "d2udxdy = " << d2udxdy << endl;     // print the evaluated second order derivative d2u/dxdy
-    cout << "d2udxdz = " << d2udxdz << endl;     // print the evaluated second order derivative d2u/dxdz
+    //double h = _h * 10;
+    //auto x1p = (Eigen::MatrixXd::Identity(3,3)
+    //    + h * _a + 0.5 * h * h * _a * _a) * y1p;
 
-    cout << "d2udydx = " << d2udydx << endl;     // print the evaluated second order derivative d2u/dydx
-    cout << "d2udydy = " << d2udydy << endl;     // print the evaluated second order derivative d2u/dydy
-    cout << "d2udydz = " << d2udydz << endl;     // print the evaluated second order derivative d2u/dydz
+    //auto x1m = (Eigen::MatrixXd::Identity(3,3)
+    //    + h * _a + 0.5 * h * h * _a * _a) * y1m;
 
-    cout << "d2udzdx = " << d2udzdx << endl;     // print the evaluated second order derivative d2u/dzdx
-    cout << "d2udzdy = " << d2udzdy << endl;     // print the evaluated second order derivative d2u/dzdy
-    cout << "d2udzdz = " << d2udzdz << endl;     // print
+    //auto x2p = (Eigen::MatrixXd::Identity(3,3)
+    //    + h * _a + 0.5 * h * h * _a * _a) * y2p;
 
-}
+    //auto x2m = (Eigen::MatrixXd::Identity(3,3)
+    //    + h * _a + 0.5 * h * h * _a * _a) * y2m;
 
-TEST_F(RungeKuttaTest, constructor) {
-    sde::RungeKutta5<double> hoge;
+    //auto x3p = (Eigen::MatrixXd::Identity(3,3)
+    //    + h * _a + 0.5 * h * h * _a * _a) * y3p;
+
+    //auto x3m = (Eigen::MatrixXd::Identity(3,3)
+    //    + h * _a + 0.5 * h * h * _a * _a) * y3m;
+
+    //auto expected1 = (x1p - x1m) / 0.002;
+    //auto expected2 = (x2p - x2m) / 0.002;
+    //auto expected3 = (x3p - x3m) / 0.002;
+
+    //Eigen::Matrix3d expected;
+    //expected.col(0) = expected1;
+    //expected.col(1) = expected2;
+    //expected.col(2) = expected3;
+
+
+
+    //for (int i = 0; i < 3; ++i) {
+    //    for (int j = 0; j < 3; ++j) {
+    //        EXPECT_NEAR(expected(i, j), actual(i, j), 1e-4);
+    //    }
+    //}
+    
 }
