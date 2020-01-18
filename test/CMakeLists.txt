@@ -4,21 +4,20 @@ set(CMAKE_CXX_STANDARD 17)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 # declare GTEST_ROOT
-set(GTEST_ROOT ~/googletest/googletest/)
+set(GTEST_ROOT ../../googletest/)
 
 # Include files directory
-include_directories(${GTEST_ROOT}/include/)
+include_directories(${GTEST_ROOT}/googletest/include/)
 
 # declare AUTODIFF_Path
 set(AUTODIFF ../../autodiff/)
 include_directories(${AUTODIFF})
 set(CODI ../../CoDiPack/include)
 include_directories(${CODI})
+set(EIGEN ../../eigen-3.3.7)
+include_directories(${EIGEN})
 
-
-# Library directory
-link_directories(${GTEST_ROOT}/build/)
-
+find_package(GTest REQUIRED)
 # Generate executable file
 add_executable(Test 
     ${CMAKE_CURRENT_SOURCE_DIR}/sample.cpp 
@@ -28,7 +27,19 @@ add_executable(Test
     ${CMAKE_CURRENT_SOURCE_DIR}/TestTensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestVectorField.cpp
 )
+#add_executable(mytest mytest.cpp)
+target_link_libraries(Test
+  PRIVATE
+    GTest::GTest
+    GTest::Main   # GTest::Mainをリンクすると自分でmain関数を書く必要がなくなる
+  )
+
+
+# Library directory
+#link_directories(${GTEST_ROOT}/build/)
+
+
 
 
 # Link libraries
-target_link_libraries(Test gtest gtest_main pthread)
+#target_link_libraries(Test gtest gtest_main pthread)
