@@ -30,6 +30,9 @@ public:
     T& operator()(int i, int j, int k) {
         return _data[k](i, j);
     }
+    const T& operator()(int i, int j, int k) const {
+        return _data[k](i, j);
+    }
 private:
     std::vector<Eigen::Matrix<T, Size, Size>> _data;
 };

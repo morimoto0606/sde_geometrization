@@ -26,3 +26,9 @@ public:
 TEST_F(VecFieldTest, getV0) {
     auto f = _sabr->getV0();
 }
+
+TEST_F(VecFieldTest, getLiftedV) {
+    sde::Sabr<double>::vector_type bm;
+    bm << -0.32, 0.23;
+    auto vecFields = _sabr->getLiftedV(bm);
+}
