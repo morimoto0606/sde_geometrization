@@ -25,6 +25,8 @@ add_executable(Test
     ${CMAKE_CURRENT_SOURCE_DIR}/TestRungeKutta.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestAutodiff.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestCodi.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TestTensor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TestVectorField.cpp
 )
 
 

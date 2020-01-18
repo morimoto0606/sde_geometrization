@@ -75,5 +75,22 @@ TEST_F(CodiTest, MatrixMulti) {
     y << 1.0,2.0,
          3.0,4.0;
     auto z = x * y;
+}
 
+TEST_F(CodiTest, power) {
+    codi::RealReverse x = 3.0;
+    codi::RealReverse y;
+ 
+    codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+    tape.setActive();
+
+    tape.registerInput(x);
+
+    y = pow(x, 5.);
+    tape.registerOutput(y);
+    tape.setPassive();
+    
+    y.setGradient(1.0);
+    tape.evaluate();
+    EXPECT_NEAR(5 * pow(3., 4), x.getGradient(), 1e-8);
 }
