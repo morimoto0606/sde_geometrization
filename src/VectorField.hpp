@@ -3,12 +3,27 @@
 namespace sde
 {
 
-template <typename T>
-class Sabr {
+template <typename T, std::size_t Size>
+class VectorField {
 public:
-    using vector_type = sde::vector_type<T, 2>;
-    using lifted_type = sde::vector_type<T, 6>;
-    Sabr(
+    using vector_type = sde::vector_type<T, Size>;
+    using lifted_type = sde::vector_type<T, Size + Size * Size>;
+ 
+    virtual ~VectorField() = default;
+    virtual std::unique_ptr<VectorField<T, Size>> clone() const = 0;
+    virtual std::function<vector_type(const vector_type&)> getV0() const = 0;
+    virtual std::vector<std::function<lifted_type(const lifted_type&)>>
+    getLiftedV(const vector_type& bm) const = 0;
+ 
+};
+
+template <typename T>
+class Sabr : public VectorField<T, 2> {
+public:
+    using vector_type = typename VectorField<T, 2>::vector_type;
+    using lifted_type = typename VectorField<T, 2>::lifted_type;
+ 
+   Sabr(
         const T& a,
         const T& b,
         const T& beta,
@@ -20,9 +35,13 @@ public:
         _gamma(1,1,0) = -_b * _rho;
         _gamma(1,0,1) = _gamma(1,1,0);
     }
-  
 
-    std::function<vector_type(const vector_type&)> getV0() const
+    std::unique_ptr<VectorField<T, 2>> clone() const override 
+    {
+        return std::make_unique<Sabr<T>>(*this);
+    }
+
+    virtual std::function<vector_type(const vector_type&)> getV0() const override
     {
         auto vec0 = [this](const vector_type& x) {
             vector_type v;
@@ -33,8 +52,8 @@ public:
         return vec0;
     }
 
-    std::vector<std::function<lifted_type(const lifted_type&)>>
-    getLiftedV(const vector_type& bm) const
+    virtual std::vector<std::function<lifted_type(const lifted_type&)>>
+    getLiftedV(const vector_type& bm) const override
     {
         auto&& vec1 = [this, &bm](const lifted_type& x){
             //x(0)=x1, x(1)=x2, x(2)=e11, x(3)=e12,x(4)=e21,x(5)=e22
@@ -71,8 +90,8 @@ private:
     T _b;
     T _beta;
     T _rho;
-    constexpr static int _bmSize = 2;
-    constexpr static int _stateSize = 2;
+    constexpr static std::size_t _bmSize = 2;
+    constexpr static std::size_t _stateSize = 2;
     sde::Tensor<T, 2> _gamma;
 };
     

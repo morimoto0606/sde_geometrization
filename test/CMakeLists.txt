@@ -26,8 +26,9 @@ add_executable(Test
     ${CMAKE_CURRENT_SOURCE_DIR}/TestCodi.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestTensor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestVectorField.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TestSobol.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TestStochasticLift.cpp
 )
-#add_executable(mytest mytest.cpp)
 target_link_libraries(Test
   PRIVATE
     GTest::GTest

@@ -24,7 +24,13 @@ class Tensor {
 public:
     Tensor() {
         for (int i = 0; i < Size; ++i) {
-            _data.emplace_back(Eigen::MatrixXd::Zero(Size,Size));
+            Eigen::Matrix<T, Size, Size> mat;
+            for (int i = 0; i < Size; ++i) {
+                for (int j = 0; j < Size; ++j) {
+                    mat(i, j) = T{0};
+                }
+            }
+            _data.emplace_back(mat);
         }
     }
     T& operator()(int i, int j, int k) {

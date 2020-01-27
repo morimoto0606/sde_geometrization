@@ -28,7 +28,7 @@ public:
 };
 
 TEST_F(RungeKuttaTest, exp) {
-    sde::RungeKutta5<autodiff::var, 3> rk;
+    sde::RungeKutta5<autodiff::var> rk;
     auto vecField = [this](const Eigen::Matrix<autodiff::var, 3, 1>& x){return _a * x;};
     Eigen::VectorXvar x(3);
     x << 3.,2.,1.;   
@@ -47,7 +47,7 @@ TEST_F(RungeKuttaTest, exp) {
 }
 
 TEST_F(RungeKuttaTest, expDiff) {
-    sde::RungeKutta5<autodiff::var, 3> rk;
+    sde::RungeKutta5<autodiff::var> rk;
     auto vecField = [this](const Eigen::Matrix<autodiff::var, 3, 1>& x){return _a * x;};
     Eigen::VectorXvar x(3);
     x << 3.,2.,1.;   
@@ -121,7 +121,7 @@ TEST_F(RungeKuttaTest, expDiff) {
 }
 
 TEST_F(RungeKuttaTest, expDiffIterative) {
-    sde::RungeKutta5<codi::RealReverse, 3> rk;
+    sde::RungeKutta5<codi::RealReverse> rk;
 
     Eigen::Matrix<codi::RealReverse, 3, 3> a;
     a << 0.,0.,0.,
