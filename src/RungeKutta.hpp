@@ -9,9 +9,6 @@ namespace sde
 template <typename T, typename Derived>
 class RungeKutta {
 public:
-    //using value_type = sde::vector_type<T, Size>;
-    //using func_type = sde::function_type<T, Size>;
-    //using func_ptr_type = sde::func_ptr_type<T, Size>;
 
     virtual ~RungeKutta() = default;
     virtual std::unique_ptr<RungeKutta<T, Derived>> clone() const = 0;
@@ -21,7 +18,7 @@ public:
         const T& h,
         const F& vecfield,
         const V& ini_val) const {
-            return dynamic_cast<Derived*>(this)->solve(h, vecfield, ini_val);
+            return dynamic_cast<const Derived*>(this)->solve(h, vecfield, ini_val);
         }
     
     template <typename V, typename F>
@@ -29,16 +26,13 @@ public:
         const T& h,
         const std::vector<std::shared_ptr<const F>>& vecfields,
         const V& ini_val) const {
-            return dynamic_cast<Derived*>(this)->solveIterative(h, vecfields, ini_val);
+            return dynamic_cast<const Derived*>(this)->solveIterative(h, vecfields, ini_val);
         }
 };
 
 template <typename T>
 class RungeKutta5 : public RungeKutta<T, RungeKutta5<T>> {
 public:
-    //using value_type = sde::vector_type<T, Size>;
-    //using func_type = sde::function_type<T, Size>;
-    //using func_ptr_type = sde::func_ptr_type<T, Size>;
 
     RungeKutta5() {
         _a(1,0) = 2./5;
@@ -65,8 +59,8 @@ public:
     }
 
 private:
-        Eigen::Matrix<T, 6, 6> _a;// = Eigen::MatrixXd::Zero(6,6);
-        Eigen::Matrix<T, 6, 1> _b;// = Eigen::MatrixXd::Zero(6,1);
+        Eigen::Matrix<T, 6, 6> _a;
+        Eigen::Matrix<T, 6, 1> _b;
 
 public:
 
@@ -75,7 +69,7 @@ public:
         const T& h,
         const F& vecfield,
         const V& ini_val) const
-    {
+    {   
         Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> k(ini_val.size(), 6);
         k.col(0) = vecfield(ini_val);
         k.col(1) = vecfield(ini_val + h * (_a(1,0) * k.col(0)));

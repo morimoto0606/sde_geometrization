@@ -14,7 +14,7 @@ set(AUTODIFF ../../autodiff/)
 include_directories(${AUTODIFF})
 set(CODI ../../CoDiPack/include)
 include_directories(${CODI})
-set(EIGEN ../../eigen-3.3.7)
+set(EIGEN ../../eigen-master)
 include_directories(${EIGEN})
 
 find_package(GTest REQUIRED)
@@ -28,7 +28,9 @@ add_executable(Test
     ${CMAKE_CURRENT_SOURCE_DIR}/TestVectorField.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestSobol.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestStochasticLift.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TestRndNormal.cpp
 )
+
 target_link_libraries(Test
   PRIVATE
     GTest::GTest

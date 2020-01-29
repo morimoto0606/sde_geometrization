@@ -9,15 +9,19 @@
 
 
 namespace sde {
+
 template <typename T, std::size_t Size>
 using vector_type = Eigen::Matrix<T, Size, 1>;
 
 template <typename T, std::size_t Size>
-using function_type = std::function<vector_type<T, Size>(const vector_type<T, Size>&)>;
+using lifted_type = vector_type<T, Size + Size * Size>;
+ 
+template <typename T>
+using function_type = std::function<T (const T&)>;
 
-template <typename T, std::size_t Size>
-using func_ptr_type = std::shared_ptr<const function_type<T, Size>>;
-
+template <typename T>
+using func_ptr_type = std::shared_ptr<const function_type<T>>;
+                      
 template <typename T, std::size_t Size>
 class Tensor {
     /// gamma(i,j,k) = gamma_{i, j}^k

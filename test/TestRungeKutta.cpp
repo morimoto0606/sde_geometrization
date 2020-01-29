@@ -130,10 +130,10 @@ TEST_F(RungeKuttaTest, expDiffIterative) {
 
     int iterNum = 10;
     const codi::RealReverse h = 1.0/iterNum;
-    auto vecField = [this, &a](const Eigen::Matrix<codi::RealReverse, 3, 1>& x){return a * x;};
-    auto vecFieldPtr = std::make_shared<const sde::function_type<codi::RealReverse, 3>>(vecField);
+    auto vecField = [this, &a](const sde::vector_type<codi::RealReverse, 3>& x){return a * x;};
+    auto vecFieldPtr = std::make_shared<sde::function_type<sde::vector_type<codi::RealReverse, 3>>>(vecField);
  
-    std::vector<sde::func_ptr_type<codi::RealReverse, 3>> vecFields;
+    std::vector<sde::func_ptr_type<sde::vector_type<codi::RealReverse, 3>>> vecFields;
     for (int i =0; i < iterNum; ++i) {
         vecFields.emplace_back(vecFieldPtr);
     }

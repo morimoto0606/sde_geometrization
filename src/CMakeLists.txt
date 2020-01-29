@@ -5,7 +5,7 @@ add_library(sde_geometrization STATIC main.cpp)
 # declare AUTODIFF_Path
 set(AUTODIFF ../../autodiff/)
 set(CODI ../../CoDiPack/include)
-set(EIGEN ../../eigen-3.3.7)
+set(EIGEN ../../eigen-master)
 
 include_directories(${AUTODIFF})
 include_directories(${CODI})

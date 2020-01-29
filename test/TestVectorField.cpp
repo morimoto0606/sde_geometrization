@@ -45,7 +45,7 @@ TEST_F(VecFieldTest, getLiftedV) {
 
 
 TEST_F(VecFieldTest, getLiftedVDiff) {
-    sde::Sabr<codi::RealReverse>::vector_type bm;
+    sde::vector_type<double, 2> bm;
     bm << -0.32, 0.23;
     auto vecFields = _sabrDiff->getLiftedV(bm);
 }
