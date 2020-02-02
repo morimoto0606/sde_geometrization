@@ -29,6 +29,8 @@ add_executable(Test
     ${CMAKE_CURRENT_SOURCE_DIR}/TestSobol.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestStochasticLift.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TestRndNormal.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TestPricer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TestEm.cpp
 )
 
 target_link_libraries(Test

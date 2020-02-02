@@ -71,13 +71,28 @@ public:
         const V& ini_val) const
     {   
         Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> k(ini_val.size(), 6);
+
         k.col(0) = vecfield(ini_val);
+        std::cout << " k.col0 = " << k.col(0) << std::endl;
         k.col(1) = vecfield(ini_val + h * (_a(1,0) * k.col(0)));
+        std::cout << " k.col1 = " << k.col(1) << std::endl;
+
         k.col(2) = vecfield(ini_val + h * (_a(2,0) * k.col(0) + _a(2,1) * k.col(1)));
+        std::cout << " k.col2 = " << k.col(2) << std::endl;
+
         k.col(3) = vecfield(ini_val + h * (_a(3,0) * k.col(0) + _a(3,1) * k.col(1) + _a(3,2) * k.col(2)));
+        std::cout << " k.col3 = " << k.col(3) << std::endl;
+
         k.col(4) = vecfield(ini_val + h * (_a(4,0) * k.col(0) + _a(4,1) * k.col(1) + _a(4,2) * k.col(2) + _a(4,3) * k.col(3)));
+        std::cout << " k.col4 = " << k.col(4) << std::endl;
+
         k.col(5) = vecfield(ini_val + h * (_a(5,0) * k.col(0) + _a(5,1) * k.col(1) + _a(5,2) * k.col(2) + _a(5,3) * k.col(3) + _a(5,4) * k.col(4)));
+        std::cout << " k.col5 = " << k.col(5) << std::endl;
+
         auto ret = ini_val + h * k * _b;
+        std::cout << " ret = " << vecfield(ret) << std::endl;
+
+
         return ret;
     }
     

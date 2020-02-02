@@ -2,6 +2,7 @@
 #include <codi.hpp>
 #include <Eigen/Dense>
 #include "sde.h"
+#include "Scheme.hpp"
 #include "RungeKutta.hpp"
 #include "VectorField.hpp"
 #include "RndNormal.hpp"
@@ -9,21 +10,17 @@
 namespace sde {
 
 template <typename R, typename RD, std::size_t Size>
-class StochasticLift {
+class StochasticLift : public Scheme<Size> {
 public:
     StochasticLift(
-        double stepSize,
         const RungeKutta<double, R>& rk,
         const RungeKutta<codi::RealReverse, RD>& rkDiff,
         const VectorField<double, Size>& vecField,
-        const VectorField<codi::RealReverse, Size>& vecFieldDiff,
-        const sde::vector_type<double, Size>& ini):
-    _stepSize(stepSize), 
+        const VectorField<codi::RealReverse, Size>& vecFieldDiff):
     _rk(rk.clone()),
     _rkDiff(rkDiff.clone()),
     _vecField(vecField.clone()),
-    _vecFieldDiff(vecFieldDiff.clone()),
-    _ini(ini) {}
+    _vecFieldDiff(vecFieldDiff.clone()){}
 
     template <typename T>
     sde::lifted_type<T, Size> getLiftedIni(
@@ -57,6 +54,7 @@ public:
         for (int i = 0; i < Size; ++i) {
             tape.registerInput(liftedIni(i));
         }
+        std::cout << "bm = "  << bm(0) << ", " << bm(1) << std::endl;
         auto flow = _rkDiff->solveIterative(1.0, _vecFieldDiff->getLiftedV(bm), liftedIni);
         for (int i = 0; i < Size; ++i) {
             tape.registerOutput(flow(i));
@@ -72,6 +70,7 @@ public:
             }
             tape.clearAdjoints();
         }
+ 
         tape.reset();
         return jac.inverse();
     }
@@ -104,13 +103,13 @@ public:
             return m;
         };
 
-        auto zeta = _rk->solve(_stepSize, vecFieldZeta, prev);
+        auto zeta = _rk->solve(1.0, vecFieldZeta, prev);
         return zeta;
     }
 
-    sde::vector_type<double, Size> evolveX(
+    sde::vector_type<double, Size> evolve(
         const sde::vector_type<double, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const 
+        const sde::vector_type<double, Size>& bm) const override
     {
         const sde::vector_type<double, Size> zeta = this->evolveZeta(prev, bm);
         const sde::lifted_type<double, Size> liftedIni = this->getLiftedIni<double>(zeta);
@@ -121,40 +120,11 @@ public:
     }
 
 
-    sde::vector_type<double, Size> generateOnePath(
-        std::size_t numSteps,
-        const Eigen::MatrixXd& bm) const
-    {
-        sde::vector_type<double, Size> x = _ini;
-        for (std::size_t i = 0; i < numSteps; ++i) {
-            x = this->evolveX(x, bm.col(i));
-        }
-        return x;
-    }
-
-    Eigen::MatrixXd generatePaths(
-        const std::size_t numSteps,
-        const std::size_t pathNum,
-        const RndNormal& generator) const 
-    {   
-        Eigen::MatrixXd path(Size, pathNum);
-        for (int p = 0; p < pathNum; ++p) {
-            const Eigen::MatrixXd& normal = generator.get(Size, numSteps);
-            const Eigen::MatrixXd& bm = sqrt(_stepSize) * normal;
-            const sde::vector_type<double, Size>& x = this->generateOnePath(numSteps, bm);
-            path.col(p) = x;
-        }
-        return path;
-    }
- 
-
 private:
-    double _stepSize;
     std::unique_ptr<RungeKutta<double, R>> _rk;
     std::unique_ptr<RungeKutta<codi::RealReverse, RD>> _rkDiff;
     std::unique_ptr<VectorField<double, Size>> _vecField;
     std::unique_ptr<VectorField<codi::RealReverse, Size>> _vecFieldDiff;
-    sde::vector_type<double, Size> _ini;
 };
 
 }//namespace sde 

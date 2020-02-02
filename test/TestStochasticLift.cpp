@@ -4,14 +4,16 @@
 #include "../src/sde.h"
 #include "../src/RungeKutta.hpp"
 #include "../src/StochasticLift.hpp"
+#include "../src/Pricer.hpp"
+#include "../src/VectorFieldSabr.hpp"
+#include "../src/VectorFieldHeston.hpp"
 
 class StochasticLiftTest : public ::testing::Test {
 public:
     void SetUp() override {
-        double stepsize = .2;
         double a = 1.0;
         double b = 0.4;
-        double beta = 0.9;
+        double beta = 1;
         double rho = -0.7;
         const sde::Sabr<double> vecField(a, b, beta, rho);
         const sde::Sabr<codi::RealReverse> vecFieldDiff(a, b, beta, rho);
@@ -19,14 +21,21 @@ public:
         const sde::RungeKutta5<codi::RealReverse> rkDiff;
         _ini << 1., 0.3;
         _lift = std::make_unique<sde::StochasticLift<sde::RungeKutta5<double>, sde::RungeKutta5<codi::RealReverse>, 2>>(
-            stepsize, rk, rkDiff, vecField, vecFieldDiff, _ini);
+            rk, rkDiff, vecField, vecFieldDiff);
         _rk = std::make_shared<sde::RungeKutta5<double>>(rk);
         _sabr = std::make_unique<sde::Sabr<double>>(a, b, beta, rho);
-        _stepSize = stepsize;
-        _bm << 1.0, 1.0;
+        _bm << 0.1, 0.1;
+
+        double xi = 1.0;
+        const sde::Heston<double> heston(xi, rho);
+        const sde::Heston<codi::RealReverse> hestonDiff(a, b, beta, rho);
+        _liftHeston = std::make_unique<sde::StochasticLift<sde::RungeKutta5<double>, sde::RungeKutta5<codi::RealReverse>, 2>>(
+            rk, rkDiff, heston, hestonDiff);
+ 
     }
-    double _stepSize;
     std::unique_ptr<sde::StochasticLift<sde::RungeKutta5<double>, sde::RungeKutta5<codi::RealReverse>, 2>> _lift;
+    std::unique_ptr<sde::StochasticLift<sde::RungeKutta5<double>, sde::RungeKutta5<codi::RealReverse>, 2>> _liftHeston;
+ 
     std::shared_ptr<sde::RungeKutta5<double>> _rk;
     std::unique_ptr<sde::Sabr<double>> _sabr;
     sde::vector_type<double, 2> _bm;
@@ -60,6 +69,7 @@ TEST_F(StochasticLiftTest, evolveJacobiInv) {
         auto expectedPlus = _rk->solveIterative(1.0, _sabr->getLiftedV(_bm), liftedIniPlus);
         liftedIniMinus(j) -= 0.0001;
         auto expectedMinus= _rk->solveIterative(1.0, _sabr->getLiftedV(_bm), liftedIniMinus);
+ 
         for (int i = 0; i < 2; ++i) {
             jac(i, j) = (expectedPlus(i) - expectedMinus(i))/0.0002;
         }
@@ -69,6 +79,8 @@ TEST_F(StochasticLiftTest, evolveJacobiInv) {
     auto expected = jac.inverse();
     for (int i = 0; i < 2; ++i) {
         for (int j = 0; j < 2; ++j) {
+
+            std::cout << "evolveJacobi = " << i << ", " << j << " " << expected(i, j) << ", " << actual(i, j) << std::endl;
             EXPECT_NEAR(expected(i, j), actual(i,j), 1e-6);
         }
     }
@@ -87,19 +99,18 @@ TEST_F(StochasticLiftTest, evolveZeta)
 TEST_F(StochasticLiftTest, evolveX)
 {
     //calculate actual
-    auto actual = _lift->evolveX(_ini, _bm);
+    auto actual = _lift->evolve(_ini, _bm);
     std::cout << actual << std::endl;
 }
 
 TEST_F(StochasticLiftTest, price) {
-    std::size_t pathNum = 100000;
+    const double maturity = 1;
+    std::size_t numSteps = 2;
+    std::size_t pathNum = 1;
     const double strike = 1.05;
-    //auto payoff = [strike](const Eigen::MatrixXd& x){
-    //    auto x0 = x.row(0);
-    //    return (x0.array() - strike).max(Eigen::ArrayXd::Zero(x0.size())).mean();
-    //};
-    sde::MtNormal generator(2);
-    auto path = _lift->generatePaths(5, pathNum, generator);
+    
+    sde::MtNormal generator(100000);
+    auto path = _lift->generatePath(maturity, numSteps, pathNum, generator, _ini);
     
     std::cout << "path" << std::endl;
     std::cout << path << std::endl;
@@ -109,7 +120,7 @@ TEST_F(StochasticLiftTest, price) {
     std::cout << und << std::endl;
 
     std::cout << "und - strike" << std::endl;
-    auto pay = und.array() - strike;
+    auto pay = und.array() - strike - 0.0401194;
     std::cout << pay << std::endl;
     
     std::cout << "payoff" << std::endl;
@@ -118,8 +129,10 @@ TEST_F(StochasticLiftTest, price) {
 
     std::cout << "price" << std::endl;
     std::cout << payoff.isNaN().select(0, payoff).mean() << std::endl;
- 
-    //double actual = payoff(path);
-    //std::cout << actual << std::endl;
+    std::cout << "price by pricer" << std::endl;
 
+    double price = sde::Pricer::callPrice(path, strike);
+    std::cout << price << std::endl;
+    double forward = sde::Pricer::forwardPrice(path, 1.0);
+    std::cout << forward << std::endl;
 }

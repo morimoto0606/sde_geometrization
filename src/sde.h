@@ -16,11 +16,11 @@ using vector_type = Eigen::Matrix<T, Size, 1>;
 template <typename T, std::size_t Size>
 using lifted_type = vector_type<T, Size + Size * Size>;
  
-template <typename T>
-using function_type = std::function<T (const T&)>;
+template <typename T, typename U = T>
+using function_type = std::function<U (const T&)>;
 
-template <typename T>
-using func_ptr_type = std::shared_ptr<const function_type<T>>;
+template <typename T, typename U = T>
+using func_ptr_type = std::shared_ptr<const function_type<T, U>>;
                       
 template <typename T, std::size_t Size>
 class Tensor {
