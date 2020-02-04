@@ -17,7 +17,6 @@ public:
         const T& rho)
     : _a(a), _b(b), _beta(beta), _rho(rho)
     {
-
     }
 
     std::unique_ptr<VectorField<T, 2>> clone() const override 
@@ -25,48 +24,28 @@ public:
         return std::make_unique<Sabr<T>>(*this);
     }
 
-
-    Eigen::Matrix<T, 2, 2> calcGInv(const sde::vector_type<T, 2>& x) const override
+    Eigen::Matrix<T, 2, 2> calcV(const sde::vector_type<T, 2>& x) const override
     {
         Eigen::Matrix<T, 2, 2> mat;
-        mat(0,0) = pow(_a, 2.) * pow(x(0), 2. * _beta) * pow(x(1), 2.);
-        mat(0,1) = _a * _b * _rho * pow(x(0), _beta) * pow(x(1), 2.);
-        mat(1,0) = _a * _b * _rho * pow(x(0), _beta) * pow(x(1), 2.);
-        mat(1,1) = pow(_b, 2.) * pow(x(1), 2.);
+        mat(0,0) = _a * pow(x(0), _beta) * x(1);
+        mat(0,1) = 0.;
+        mat(1,0) = _b * _rho * x(1);
+        mat(1,1) = _b * sqrt(1. - pow(_rho, 2.)) * x(1);
         return mat;
     }
 
-    Eigen::Matrix<T, 2, 2> calcG(const sde::vector_type<T, 2>& x) const
-    {
-        Eigen::Matrix<T, 2, 2> mat;
-        mat(0,0) = (pow(x(0), -2 * _beta) *  pow(x(1), -2)) 
-            / (pow(_a, 2) * (1. - pow(_rho, 2)));
-        mat(0,1) = -_rho * pow(x(0), -_beta) * pow(x(1), -2)
-            / (_a * _b * (1. - pow(_rho, 2)));
-        mat(1,0) = -_rho * pow(x(0), -_beta) * pow(x(1), -2)
-            / (_a * _b * (1. - pow(_rho, 2)));
-        mat(1,1) = pow(x(1), -2)
-            / (pow(_b, 2) * (1. - pow(_rho, 2)));
-        return mat;
-    }
-        
     sde::Tensor<T, 2> calcGDiff(const sde::vector_type<T, 2>& x) const override
     {
         sde::Tensor<T, 2> gDiff;
         const T nu = 1. - pow(_rho, 2.);
-        gDiff(0,0,0) = -2. * _beta * pow(x(0), -2.*_beta -1) * pow(x(1), -2.)
-            / (pow(_a, 2.) * nu);
-        gDiff(0,0,1) = -2. * pow(x(0), -2.*_beta) * pow(x(1), -3.)
-            / (pow(_a, 2.) * nu);
-        gDiff(0,1,0) = _beta * _rho * pow(x(0), -_beta-1.) * pow(x(1), -2.)
-            / (_a * _b * nu);
-        gDiff(0,1,1) = 2. * _rho * pow(x(0), -_beta) * pow(x(1), -3)
-            / (_a * _b * nu);
+        gDiff(0,0,0) = -2. * _beta / (pow(_a, 2.) * nu) * pow(x(0), -2.*_beta -1) * pow(x(1), -2.);
+        gDiff(0,0,1) = -2. / (pow(_a, 2.) * nu) * pow(x(0), -2.*_beta) * pow(x(1), -3.);
+        gDiff(0,1,0) = _beta * _rho / (_a * _b * nu) * pow(x(0), -_beta-1.) * pow(x(1), -2.);
+        gDiff(0,1,1) = 2. * _rho / (_a * _b * nu) * pow(x(0), -_beta) * pow(x(1), -3);
         gDiff(1,0,0) = gDiff(0,1,0);
         gDiff(1,0,1) = gDiff(0,1,1);
         gDiff(1,1,0) = 0.;
-        gDiff(1,1,1) = -2. * pow(x(1), -3)
-            / (pow(_b, 2.) * nu);
+        gDiff(1,1,1) = -2. / (pow(_b, 2.) * nu) * pow(x(1), -3);
         return gDiff;
     }
  

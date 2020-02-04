@@ -6,32 +6,42 @@
 
 namespace sde
 {
-template <typename T, typename Derived>
+template <typename Derived>
 class RungeKutta {
 public:
 
     virtual ~RungeKutta() = default;
-    virtual std::unique_ptr<RungeKutta<T, Derived>> clone() const = 0;
+    virtual std::unique_ptr<RungeKutta<Derived>> clone() const = 0;
 
     template <typename V, typename F>
     V solve(
-        const T& h,
+        double h,
         const F& vecfield,
-        const V& ini_val) const {
-            return dynamic_cast<const Derived*>(this)->solve(h, vecfield, ini_val);
-        }
+        const V& ini_val) const 
+    {
+        return dynamic_cast<const Derived*>(this)->solve(h, vecfield, ini_val);
+    }
     
     template <typename V, typename F>
     V solveIterative(
-        const T& h,
+        double maturity,
+        int numDiscretization,
         const std::vector<std::shared_ptr<const F>>& vecfields,
-        const V& ini_val) const {
-            return dynamic_cast<const Derived*>(this)->solveIterative(h, vecfields, ini_val);
+        const V& ini_val) const
+    {
+        const double h = maturity / numDiscretization;
+        auto x = ini_val;
+        for (auto v: vecfields) {
+            for (int i = 0; i < numDiscretization; ++i) {
+                x = this->solve(h, *v, x);
+            }
         }
+        return x;
+    }
+
 };
 
-template <typename T>
-class RungeKutta5 : public RungeKutta<T, RungeKutta5<T>> {
+class RungeKutta5 : public RungeKutta<RungeKutta5> {
 public:
 
     RungeKutta5() {
@@ -53,60 +63,118 @@ public:
 
     }
 
-    std::unique_ptr<RungeKutta<T, RungeKutta5<T>>> clone() const override
+    std::unique_ptr<RungeKutta<RungeKutta5>> clone() const override
     {
-        return std::make_unique<RungeKutta5<T>>(*this);
+        return std::make_unique<RungeKutta5>(*this);
     }
 
 private:
-        Eigen::Matrix<T, 6, 6> _a;
-        Eigen::Matrix<T, 6, 1> _b;
+        Eigen::Matrix<double, 6, 6> _a;
+        Eigen::Matrix<double, 6, 1> _b;
 
 public:
 
     template <typename V, typename F>
     V solve(
-        const T& h,
+        double h,
         const F& vecfield,
         const V& ini_val) const
     {   
-        Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> k(ini_val.size(), 6);
+        Eigen::Matrix<typename V::value_type, Eigen::Dynamic, Eigen::Dynamic> 
+            k(ini_val.size(), 6);
 
         k.col(0) = vecfield(ini_val);
-        std::cout << " k.col0 = " << k.col(0) << std::endl;
         k.col(1) = vecfield(ini_val + h * (_a(1,0) * k.col(0)));
-        std::cout << " k.col1 = " << k.col(1) << std::endl;
-
         k.col(2) = vecfield(ini_val + h * (_a(2,0) * k.col(0) + _a(2,1) * k.col(1)));
-        std::cout << " k.col2 = " << k.col(2) << std::endl;
-
         k.col(3) = vecfield(ini_val + h * (_a(3,0) * k.col(0) + _a(3,1) * k.col(1) + _a(3,2) * k.col(2)));
-        std::cout << " k.col3 = " << k.col(3) << std::endl;
-
         k.col(4) = vecfield(ini_val + h * (_a(4,0) * k.col(0) + _a(4,1) * k.col(1) + _a(4,2) * k.col(2) + _a(4,3) * k.col(3)));
-        std::cout << " k.col4 = " << k.col(4) << std::endl;
-
         k.col(5) = vecfield(ini_val + h * (_a(5,0) * k.col(0) + _a(5,1) * k.col(1) + _a(5,2) * k.col(2) + _a(5,3) * k.col(3) + _a(5,4) * k.col(4)));
-        std::cout << " k.col5 = " << k.col(5) << std::endl;
+        auto v = h * (k.col(0) * _b(0) + k.col(1) * _b(1) + k.col(2) * _b(2) + k.col(3) * _b(3) + k.col(4) * _b(4) +  k.col(5) * _b(5));
+        auto ret = ini_val + v;
+        return ret;
+    }
+   
+};
 
-        auto ret = ini_val + h * k * _b;
-        std::cout << " ret = " << vecfield(ret) << std::endl;
+class RungeKutta4 : public RungeKutta<RungeKutta4> {
+public:
 
+    RungeKutta4() {
+        _a(1,0) = .5;
+        _a(2,1) = .5;
+        _a(3,2) = 1.;
 
+        _b << 1.,2.,2.,1.;
+        _b /= 6.;
+
+    }
+
+    std::unique_ptr<RungeKutta<RungeKutta4>> clone() const override
+    {
+        return std::make_unique<RungeKutta4>(*this);
+    }
+
+private:
+        Eigen::Matrix<double, 4, 4> _a;
+        Eigen::Matrix<double, 4, 1> _b;
+
+public:
+
+    template <typename V, typename F>
+    V solve(
+        double h,
+        const F& vecfield,
+        const V& ini_val) const
+    {   
+        Eigen::Matrix<typename V::value_type, Eigen::Dynamic, Eigen::Dynamic> 
+            k(ini_val.size(), 4);
+
+        k.col(0) = vecfield(ini_val);
+        k.col(1) = vecfield(ini_val + h * (_a(1,0) * k.col(0)));
+        k.col(2) = vecfield(ini_val + h * (_a(2,0) * k.col(0) + _a(2,1) * k.col(1)));
+        k.col(3) = vecfield(ini_val + h * (_a(3,0) * k.col(0) + _a(3,1) * k.col(1) + _a(3,2) * k.col(2)));
+        auto v = h * (k.col(0) * _b(0) + k.col(1) * _b(1) + k.col(2) * _b(2) + k.col(3) * _b(3));
+        auto ret = ini_val + v;
         return ret;
     }
     
-    template <typename V, typename F>
-    V solveIterative(
-        const T& h,
-        const std::vector<std::shared_ptr<const F>>& vecfields,
-        const V& ini_val) const
-    {
-        auto x = ini_val;
-        for (auto v: vecfields) {
-            x = this->solve(h, *v, x);
-        }
-        return x;
+};
+
+class RungeKutta2 : public RungeKutta<RungeKutta2> {
+public:
+
+    RungeKutta2() {
+        _a(1,0) = 1.0;
+        _b << 1.,1.;
+        _b /= 2.;
     }
+
+    std::unique_ptr<RungeKutta<RungeKutta2>> clone() const override
+    {
+        return std::make_unique<RungeKutta2>(*this);
+    }
+
+private:
+        Eigen::Matrix<double, 2, 2> _a;
+        Eigen::Matrix<double, 2, 1> _b;
+
+public:
+
+    template <typename V, typename F>
+    V solve(
+        double h,
+        const F& vecfield,
+        const V& ini_val) const
+    {   
+        Eigen::Matrix<typename V::value_type, Eigen::Dynamic, Eigen::Dynamic> 
+            k(ini_val.size(), 2);
+
+        k.col(0) = vecfield(ini_val);
+        k.col(1) = vecfield(ini_val + h * (_a(1,0) * k.col(0)));
+        auto v = h * (k.col(0) * _b(0) + k.col(1) * _b(1));
+        auto ret = ini_val + v;
+        return ret;
+    }
+    
 };
 }

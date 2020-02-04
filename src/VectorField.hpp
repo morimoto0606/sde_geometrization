@@ -11,14 +11,22 @@ public:
 
     virtual ~VectorField() = default;
     virtual std::unique_ptr<VectorField<T, Size>> clone() const = 0;
-    virtual Eigen::Matrix<T, Size, Size> calcGInv(const sde::vector_type<T, Size>& x) const = 0;
+    virtual Eigen::Matrix<T, Size, Size> calcV(const sde::vector_type<T, Size>& x) const = 0;
     virtual sde::Tensor<T, Size> calcGDiff(const sde::vector_type<T, Size>& x) const = 0;
     virtual sde::vector_type<T, Size> calcV0(const sde::vector_type<T, Size>& x) const = 0;
- 
+
+    Eigen::Matrix<T, 2, 2> calcGInv(const sde::vector_type<T, 2>& x) const
+    {
+        auto&& v = calcV(x);
+        auto&& trans = v.transpose();
+        auto&& mat  = v * trans;
+        return mat;
+    }
+
     sde::Tensor<T, Size> calcGamma(const sde::vector_type<T, Size>& x) const 
     {
-        std::cout << "X" << std::endl;
-        std::cout << x << std::endl;
+        //std::cout << "X" << std::endl;
+        //std::cout << x << std::endl;
         auto gInv = calcGInv(x);
         auto gDiff = calcGDiff(x);
  
@@ -35,7 +43,6 @@ public:
             for (int j = 0; j < Size; ++j) {
                 for (int k = 0; k < Size; ++k) {
                     gamma(i, j, k) = calc(i, j, k);
-                    std::cout << "gamma " << i << j<< k << " = " << gamma(i,j,k) << std::endl;
                 }
             }
         }
@@ -64,7 +71,7 @@ public:
                     T ret = 0;
                     for (int k = 0; k < Size; ++k) {
                         for (int l = 0; l < Size; ++l) {
-                            ret = ret - gamma(k, l, i) * e(l, j) * e(k, alpha); 
+                            ret = ret + gamma(k, l, i) * e(l, j) * e(k, alpha); 
                         }
                     }
                     return ret;
@@ -76,7 +83,7 @@ public:
                 }
                 for (int i = 0; i < Size; ++i) {
                     for (int j = 0; j < Size; ++j) {
-                        v(Size + i * Size + j) = calcV(i, j);
+                        v(Size + i * Size + j) = -calcV(i, j);
                     }
                 }
                 //v << v0, v1, v00, v01, v10, v11;
@@ -112,9 +119,6 @@ public:
         };
         return vec0;
     }
-
-
-
 };
     
 } // namespace sde

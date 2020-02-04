@@ -28,11 +28,17 @@ public:
 };
 
 TEST_F(RungeKuttaTest, exp) {
-    sde::RungeKutta5<autodiff::var> rk;
+    sde::RungeKutta5 rk;
     auto vecField = [this](const Eigen::Matrix<autodiff::var, 3, 1>& x){return _a * x;};
     Eigen::VectorXvar x(3);
     x << 3.,2.,1.;   
     auto actual = rk.solve(_h, vecField, x);
+
+    sde::RungeKutta4 rk4;
+    auto actual2 = rk4.solve(_h, vecField, x);
+
+    sde::RungeKutta2 rk2;
+    auto actual3 = rk2.solve(_h, vecField, x);
 
     Eigen::Vector3d y;
     y << 3.,2.,1.;   
@@ -42,12 +48,15 @@ TEST_F(RungeKuttaTest, exp) {
 
     for (int i = 0; i < 3; ++i) {
         EXPECT_NEAR(expected(i, 0), static_cast<double>(actual(i, 0)), 1e-4);
+        EXPECT_NEAR(expected(i, 0), static_cast<double>(actual2(i, 0)), 1e-4);
+        EXPECT_NEAR(expected(i, 0), static_cast<double>(actual3(i, 0)), 1e-4);
     }
-    
 }
+  
+
 
 TEST_F(RungeKuttaTest, expDiff) {
-    sde::RungeKutta5<autodiff::var> rk;
+    sde::RungeKutta5 rk;
     auto vecField = [this](const Eigen::Matrix<autodiff::var, 3, 1>& x){return _a * x;};
     Eigen::VectorXvar x(3);
     x << 3.,2.,1.;   
@@ -121,23 +130,18 @@ TEST_F(RungeKuttaTest, expDiff) {
 }
 
 TEST_F(RungeKuttaTest, expDiffIterative) {
-    sde::RungeKutta5<codi::RealReverse> rk;
+    sde::RungeKutta5 rk;
 
     Eigen::Matrix<codi::RealReverse, 3, 3> a;
     a << 0.,0.,0.,
          1.,0.,0.,
          2.,3.,0.;
 
+    double maturity = 1.0;
     int iterNum = 10;
-    const codi::RealReverse h = 1.0/iterNum;
     auto vecField = [this, &a](const sde::vector_type<codi::RealReverse, 3>& x){return a * x;};
     auto vecFieldPtr = std::make_shared<sde::function_type<sde::vector_type<codi::RealReverse, 3>>>(vecField);
  
-    std::vector<sde::func_ptr_type<sde::vector_type<codi::RealReverse, 3>>> vecFields;
-    for (int i =0; i < iterNum; ++i) {
-        vecFields.emplace_back(vecFieldPtr);
-    }
-
     sde::vector_type<codi::RealReverse, 3> x;
     x << 3.,2.,1.;   
 
@@ -146,7 +150,8 @@ TEST_F(RungeKuttaTest, expDiffIterative) {
     for(size_t i = 0; i < 3; ++i) {
       tape.registerInput(x(i));
     }
-    auto z = rk.solveIterative(h, vecFields, x);
+    std::vector<sde::func_ptr_type<sde::vector_type<codi::RealReverse, 3>>> vecPtr {vecFieldPtr};
+    auto z = rk.solve(maturity, vecField, x);//rk.solveIterative(maturity, iterNum, vecPtr, x);
  
     tape.registerOutput(z(0));
     tape.registerOutput(z(1));
@@ -214,7 +219,7 @@ TEST_F(RungeKuttaTest, expDiffIterative) {
     Eigen::Vector3d y3m;
     y3m << 3.,2.,1.-0.001;   
 
-    double t = 1;
+    double t = maturity;
     auto x1p = (Eigen::MatrixXd::Identity(3,3)
         + t * _a + 0.5 * t * t * _a * _a) * y1p;
 
