@@ -15,33 +15,31 @@ public:
         double b = 0.4;
         double beta = 0.9;
         double rho = -0.7;
-        const sde::Sabr<double> vecField(a, b, beta, rho);
-        const sde::Sabr<codi::RealReverse> vecFieldDiff(a, b, beta, rho);
+        const sde::Sabr vecField(a, b, beta, rho);
         const sde::RungeKutta2 rk;
         int numStepRk = 1;
 
         _ini << 1., 0.3;
-        _lift = std::make_unique<sde::StochasticLift<sde::RungeKutta2,  2>>(
-            rk, vecField, vecFieldDiff, numStepRk);
+        _lift = std::make_unique<sde::StochasticLift<sde::RungeKutta2, sde::Sabr,  2>>(
+            rk, vecField, numStepRk);
         _rk = std::make_shared<sde::RungeKutta2>(rk);
-        _sabr = std::make_unique<sde::Sabr<double>>(a, b, beta, rho);
+        _sabr = std::make_unique<sde::Sabr>(a, b, beta, rho);
         _bm << 0.1, 0.1;
 
         double mu = 0.05;
         double kappa = 2.0;
         double theta = 0.09;
         double xi = 0.1;
-        const sde::Heston<double> heston(mu, kappa, theta, xi, rho);
-        const sde::Heston<codi::RealReverse> hestonDiff(mu, kappa, theta, xi, rho);
-        _liftHeston = std::make_unique<sde::StochasticLift<sde::RungeKutta2, 2>>(
-            rk, heston, hestonDiff, numStepRk);
+        const sde::Heston heston(mu, kappa, theta, xi, rho);
+        _liftHeston = std::make_unique<sde::StochasticLift<sde::RungeKutta2, sde::Heston, 2>>(
+            rk, heston, numStepRk);
  
     }
-    std::unique_ptr<sde::StochasticLift<sde::RungeKutta2, 2>> _lift;
-    std::unique_ptr<sde::StochasticLift<sde::RungeKutta2, 2>> _liftHeston;
+    std::unique_ptr<sde::StochasticLift<sde::RungeKutta2, sde::Sabr, 2>> _lift;
+    std::unique_ptr<sde::StochasticLift<sde::RungeKutta2, sde::Heston, 2>> _liftHeston;
  
     std::shared_ptr<sde::RungeKutta2> _rk;
-    std::unique_ptr<sde::Sabr<double>> _sabr;
+    std::unique_ptr<sde::Sabr> _sabr;
     sde::vector_type<double, 2> _bm;
     sde::vector_type<double, 2> _ini;
 };
@@ -70,9 +68,9 @@ TEST_F(StochasticLiftTest, evolveJacobiInv) {
     Eigen::Matrix2d jac;
     for (int j = 0; j < 2; ++j) {
         liftedIniPlus(j) += 0.0001;
-        auto expectedPlus = _rk->solveIterative(1.0, 1, _sabr->getLiftedV(_bm), liftedIniPlus);
+        auto expectedPlus = _rk->solveIterative(1.0, 1, _sabr->getLiftedV<double>(_bm), liftedIniPlus);
         liftedIniMinus(j) -= 0.0001;
-        auto expectedMinus= _rk->solveIterative(1.0, 1, _sabr->getLiftedV(_bm), liftedIniMinus);
+        auto expectedMinus= _rk->solveIterative(1.0, 1, _sabr->getLiftedV<double>(_bm), liftedIniMinus);
  
         for (int i = 0; i < 2; ++i) {
             jac(i, j) = (expectedPlus(i) - expectedMinus(i))/0.0002;

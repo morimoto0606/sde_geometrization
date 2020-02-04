@@ -3,16 +3,32 @@
 namespace sde
 {
 
-template <typename T, std::size_t Size>
+class Sabr;
+class Heston;
+
+template <typename Derived, std::size_t Size>
 class VectorField {
 public:
 
     virtual ~VectorField() = default;
-    virtual std::unique_ptr<VectorField<T, Size>> clone() const = 0;
-    virtual Eigen::Matrix<T, Size, Size> calcV(const sde::vector_type<T, Size>& x) const = 0;
-    virtual sde::Tensor<T, Size> calcGDiff(const sde::vector_type<T, Size>& x) const = 0;
-    virtual sde::vector_type<T, Size> calcV0(const sde::vector_type<T, Size>& x) const = 0;
+    virtual std::unique_ptr<VectorField<Derived, Size>> clone() const = 0;
 
+    template <typename T>
+    Eigen::Matrix<T, Size, Size> calcV(const sde::vector_type<T, Size>& x) const {
+        return dynamic_cast<const Derived*>(this)->calcV(x);
+    }
+
+    template<typename T>
+    sde::Tensor<T, Size> calcGDiff(const sde::vector_type<T, Size>& x) const {
+        return dynamic_cast<const Derived*>(this)->calcGDiff(x);
+    }
+
+    template<typename T>
+    sde::vector_type<T, Size> calcV0(const sde::vector_type<T, Size>& x) const {
+        return dynamic_cast<const Derived*>(this)->calcV0(x);
+    }
+
+    template <typename T>
     Eigen::Matrix<T, 2, 2> calcGInv(const sde::vector_type<T, 2>& x) const
     {
         auto&& v = calcV(x);
@@ -21,12 +37,13 @@ public:
         return mat;
     }
 
+    template <typename T>
     sde::Tensor<T, Size> calcGamma(const sde::vector_type<T, Size>& x) const 
     {
         //std::cout << "X" << std::endl;
         //std::cout << x << std::endl;
-        auto gInv = calcGInv(x);
-        auto gDiff = calcGDiff(x);
+        auto gInv = this->calcGInv(x);
+        auto gDiff = this->calcGDiff(x);
  
         auto&& calc = [&gInv, &gDiff](int i, int j, int k){
             T g = 0;
@@ -46,7 +63,8 @@ public:
         }
         return gamma;
     }
-    
+
+    template <typename T>    
     std::vector<sde::func_ptr_type<sde::lifted_type<T, Size>>>
     getLiftedV(const sde::vector_type<double, Size>& bm) const
     {
@@ -99,6 +117,7 @@ public:
         };
     }
 
+    template <typename T>
     sde::function_type<sde::vector_type<T, Size>> getV0() const 
     {
         auto&& vec0 = [this](const sde::vector_type<T, Size>& x) {
@@ -118,5 +137,5 @@ public:
         return vec0;
     }
 };
-    
+   
 } // namespace sde

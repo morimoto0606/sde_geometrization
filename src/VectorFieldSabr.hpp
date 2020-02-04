@@ -4,27 +4,22 @@
 namespace sde
 {
 
-template <typename T>
-class Sabr : public VectorField<T, 2> {
-public:
-    using vector_type = sde::vector_type<T, 2>;
-    using lifted_type = sde::lifted_type<T, 2>;
- 
-    Sabr(
-        double a,
-        double b,
+class Sabr : public VectorField<Sabr, 2> { 
+    
+    public: Sabr( double a, double b,
         double beta,
         double rho)
     : _a(a), _b(b), _beta(beta), _rho(rho)
     {
     }
 
-    std::unique_ptr<VectorField<T, 2>> clone() const override 
+    std::unique_ptr<VectorField<Sabr, 2>> clone() const override 
     {
-        return std::make_unique<Sabr<T>>(*this);
+        return std::make_unique<Sabr>(*this);
     }
 
-    Eigen::Matrix<T, 2, 2> calcV(const sde::vector_type<T, 2>& x) const override
+    template <typename T>
+    Eigen::Matrix<T, 2, 2> calcV(const sde::vector_type<T, 2>& x) const
     {
         Eigen::Matrix<T, 2, 2> mat;
         mat(0,0) = _a * pow(x(0), _beta) * x(1);
@@ -34,7 +29,8 @@ public:
         return mat;
     }
 
-    sde::Tensor<T, 2> calcGDiff(const sde::vector_type<T, 2>& x) const override
+    template <typename T>
+    sde::Tensor<T, 2> calcGDiff(const sde::vector_type<T, 2>& x) const
     {
         sde::Tensor<T, 2> gDiff;
         const T nu = 1. - pow(_rho, 2.);
@@ -48,8 +44,9 @@ public:
         gDiff(1,1,1) = -2. / (pow(_b, 2.) * nu) * pow(x(1), -3);
         return gDiff;
     }
- 
-    sde::vector_type<T, 2> calcV0(const sde::vector_type<T, 2>& x) const override
+
+    template <typename T>
+    sde::vector_type<T, 2> calcV0(const sde::vector_type<T, 2>& x) const 
     {
         sde::vector_type<T, 2> v;
         v(0) = 0;
@@ -65,5 +62,5 @@ private:
     constexpr static std::size_t _bmSize = 2;
     constexpr static std::size_t _stateSize = 2;
 };
-    
+ 
 } // namespace sde

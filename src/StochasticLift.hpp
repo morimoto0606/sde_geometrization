@@ -9,17 +9,15 @@
 
 namespace sde {
 
-template <typename R, std::size_t Size>
+template <typename R, typename V, std::size_t Size>
 class StochasticLift : public Scheme<Size> {
 public:
     StochasticLift(
         const RungeKutta<R>& rk,
-        const VectorField<double, Size>& vecField,
-        const VectorField<codi::RealReverse, Size>& vecFieldDiff,
+        const VectorField<V, Size>& vecField,
         int numStepRk):
     _rk(rk.clone()),
     _vecField(vecField.clone()),
-    _vecFieldDiff(vecFieldDiff.clone()),
     _numStepRk(numStepRk){}
 
     template <typename T, typename U>
@@ -55,7 +53,7 @@ public:
         for (int i = 0; i < Size; ++i) {
             tape.registerInput(liftedIni(i));
         }
-        auto flow = _rk->solveIterative(1.0, 1, _vecFieldDiff->getLiftedV(bm), liftedIni);
+        auto flow = _rk->solveIterative(1.0, 1, _vecField->template getLiftedV<codi::RealReverse>(bm), liftedIni);
         for (int i = 0; i < Size; ++i) {
             tape.registerOutput(flow(i));
         }
@@ -82,7 +80,7 @@ public:
         const Eigen::Matrix<double, Size, Size> jacobi 
             = this->evolveJacobiInv(prev, bm);
         const sde::function_type<sde::vector_type<double, Size>> v0
-            = _vecField->getV0();
+            = _vecField->template getV0<double>();
 
         auto vecFieldZeta = [this, &bm, &jacobi, &v0](const sde::vector_type<double, Size>& x)
         {
@@ -91,7 +89,7 @@ public:
             const sde::lifted_type<double, Size> liftedFlow = _rk->solveIterative(
                 1.0,
                 _numStepRk, 
-                _vecField->getLiftedV(bm),
+                _vecField->template getLiftedV<double>(bm),
                 liftedIni);
             const sde::vector_type<double, Size> flow = liftedFlow(Eigen::seqN(0, Size));
             const sde::vector_type<double, Size> m = jacobi * v0(flow);
@@ -115,7 +113,7 @@ public:
         */
         const sde::lifted_type<double, Size> liftedIni = this->getLiftedIni<double>(prev);
         const sde::lifted_type<double, Size> liftedX
-            = _rk->solveIterative(1, _numStepRk, _vecField->getLiftedV(bm), liftedIni);
+            = _rk->solveIterative(1, _numStepRk, _vecField->template getLiftedV<double>(bm), liftedIni);
         const sde::vector_type<double, Size> x = liftedX(Eigen::seqN(0, Size));
         return x;
     }
@@ -136,15 +134,14 @@ public:
         const sde::vector_type<double, Size> zeta = this->evolveZeta(prev, bm);
         const sde::lifted_type<double, Size> liftedIni = this->getLiftedIni<double>(zeta);
         const sde::lifted_type<double, Size> liftedX
-            = _rk->solveIterative(1.0, _numStepRk, _vecField->getLiftedV(bm), liftedIni);
+            = _rk->solveIterative(1.0, _numStepRk, _vecField->template getLiftedV<double>(bm), liftedIni);
         const sde::vector_type<double, Size> x = liftedX(Eigen::seqN(0, Size));
         return x;
     }
 
 private:
     std::unique_ptr<RungeKutta<R>> _rk;
-    std::unique_ptr<VectorField<double, Size>> _vecField;
-    std::unique_ptr<VectorField<codi::RealReverse, Size>> _vecFieldDiff;
+    std::unique_ptr<VectorField<V, Size>> _vecField;
     int _numStepRk;
 };
 

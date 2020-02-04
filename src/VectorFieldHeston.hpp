@@ -3,29 +3,26 @@
 #include "VectorField.hpp"
 namespace sde
 {
-
-template <typename T>
-class Heston : public VectorField<T, 2> {
+class Heston : public VectorField<Heston, 2> {
 public:
-    using vector_type = sde::vector_type<T, 2>;
-    using lifted_type = sde::lifted_type<T, 2>;
  
    Heston(
-        const T& mu,
-        const T& kappa,
-        const T& theta,
-        const T& xi,
-        const T& rho)
+        double mu,
+        double kappa,
+        double theta,
+        double xi,
+        double rho)
     : _mu(mu), _kappa(kappa), _theta(theta), _xi(xi), _rho(rho)
     {
     }
 
-    std::unique_ptr<VectorField<T, 2>> clone() const override 
+    std::unique_ptr<VectorField<Heston, 2>> clone() const override 
     {
-        return std::make_unique<Heston<T>>(*this);
+        return std::make_unique<Heston>(*this);
     }
 
-    Eigen::Matrix<T, 2, 2> calcV(const sde::vector_type<T, 2>& x) const override
+    template <typename T>
+    Eigen::Matrix<T, 2, 2> calcV(const sde::vector_type<T, 2>& x) const
     {
         Eigen::Matrix<T, 2, 2> mat;
         mat(0,0) = sqrt(x(1)) * x(0);
@@ -35,7 +32,8 @@ public:
         return mat;
     }
 
-    sde::Tensor<T, 2> calcGDiff(const sde::vector_type<T, 2>& x) const override
+    template <typename T>
+    sde::Tensor<T, 2> calcGDiff(const sde::vector_type<T, 2>& x) const
     {
         const T nu = 1. - pow(_rho, 2.);
         sde::Tensor<T, 2> gDiff;
@@ -49,8 +47,9 @@ public:
         gDiff(1,1,1) = -pow(x(1), -2.) / (pow(_xi, 2.) * nu);
         return gDiff;
     }
- 
-    sde::vector_type<T, 2> calcV0(const sde::vector_type<T, 2>& x) const override
+    
+    template <typename T>
+    sde::vector_type<T, 2> calcV0(const sde::vector_type<T, 2>& x) const
     {
         sde::vector_type<T, 2> v;
         v(0) = 0;
@@ -59,13 +58,14 @@ public:
     }
 
 private:
-    T _mu;
-    T _kappa;
-    T _theta;
-    T _xi;
-    T _rho;
+    double _mu;
+    double _kappa;
+    double _theta;
+    double _xi;
+    double _rho;
     constexpr static std::size_t _bmSize = 2;
     constexpr static std::size_t _stateSize = 2;
 };
-    
+  
+  
 } // namespace sde
