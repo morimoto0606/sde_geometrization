@@ -38,6 +38,21 @@ public:
         return liftedIni;
     }
 
+    template <typename T>
+    sde::vector_type<T, Size> evolveXi(
+        const sde::vector_type<T, Size>& prev,
+        const sde::vector_type<double, Size>& bm) const  
+    {
+        /*
+        dXi(t,x)j=sum_{i=1}^N V_i(Xi(t))dB^i(t)-1/2g^{kl}Gamma_{kl}^idt ,Xi(0)=x
+        */
+        auto liftedIni = this->getLiftedIni<T>(prev);
+        auto liftedX
+            = _rk->solveIterative(1.0, _numStepRk, _vecField->template getLiftedV<T>(bm), liftedIni);
+        auto x = liftedX(Eigen::seqN(0, Size));
+        return x;
+    }
+ 
     Eigen::Matrix<double, Size, Size> evolveJacobiInv(
         const sde::vector_type<double, Size>& prev,
         const sde::vector_type<double, Size>& bm) const  
@@ -104,39 +119,13 @@ public:
         return zeta;
     }
 
-    sde::vector_type<double, Size> evolveXi(
-        const sde::vector_type<double, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const  
-    {
-        /*
-        dXi(t,x)j=sum_{i=1}^N V_i(Xi(t))dB^i(t)-1/2g^{kl}Gamma_{kl}^idt ,Xi(0)=x
-        */
-        const sde::lifted_type<double, Size> liftedIni = this->getLiftedIni<double>(prev);
-        const sde::lifted_type<double, Size> liftedX
-            = _rk->solveIterative(1, _numStepRk, _vecField->template getLiftedV<double>(bm), liftedIni);
-        const sde::vector_type<double, Size> x = liftedX(Eigen::seqN(0, Size));
-        return x;
-    }
- 
-    sde::vector_type<double, Size> evolveX(
+
+    sde::vector_type<double, Size> evolve(
         const sde::vector_type<double, Size>& prev,
         const sde::vector_type<double, Size>& bm) const 
     {
         const sde::vector_type<double, Size> zeta = this->evolveZeta(prev, bm);
         return evolveXi(zeta, bm);
-    }
-
-   
-    sde::vector_type<double, Size> evolve(
-        const sde::vector_type<double, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const override
-    {
-        const sde::vector_type<double, Size> zeta = this->evolveZeta(prev, bm);
-        const sde::lifted_type<double, Size> liftedIni = this->getLiftedIni<double>(zeta);
-        const sde::lifted_type<double, Size> liftedX
-            = _rk->solveIterative(1.0, _numStepRk, _vecField->template getLiftedV<double>(bm), liftedIni);
-        const sde::vector_type<double, Size> x = liftedX(Eigen::seqN(0, Size));
-        return x;
     }
 
 private:

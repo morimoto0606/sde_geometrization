@@ -4,6 +4,7 @@
 #include <autodiff/reverse.hpp>
 #include <autodiff/forward.hpp>
 #include <autodiff/reverse/eigen.hpp>
+#include <codi.hpp>
 
 
 
@@ -21,6 +22,16 @@ using function_type = std::function<U (const T&)>;
 
 template <typename T, typename U = T>
 using func_ptr_type = std::shared_ptr<const function_type<T, U>>;
+
+template <int Size>
+sde::vector_type<codi::RealReverse, Size> cast(const sde::vector_type<double, Size>& x)
+{
+    sde::vector_type<codi::RealReverse, Size> y;
+    for (int i = 0; i < Size; ++i) {
+        y(i) = x(i);
+    }
+    return y;
+}
                       
 template <typename T, std::size_t Size>
 class Tensor {
