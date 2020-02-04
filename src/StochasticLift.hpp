@@ -9,17 +9,15 @@
 
 namespace sde {
 
-template <typename R, typename RD, std::size_t Size>
+template <typename R, std::size_t Size>
 class StochasticLift : public Scheme<Size> {
 public:
     StochasticLift(
-        const RungeKutta<double, R>& rk,
-        const RungeKutta<codi::RealReverse, RD>& rkDiff,
+        const RungeKutta<R>& rk,
         const VectorField<double, Size>& vecField,
         const VectorField<codi::RealReverse, Size>& vecFieldDiff,
         int numStepRk):
     _rk(rk.clone()),
-    _rkDiff(rkDiff.clone()),
     _vecField(vecField.clone()),
     _vecFieldDiff(vecFieldDiff.clone()),
     _numStepRk(numStepRk){}
@@ -57,7 +55,7 @@ public:
         for (int i = 0; i < Size; ++i) {
             tape.registerInput(liftedIni(i));
         }
-        auto flow = _rkDiff->solveIterative(1.0, 1, _vecFieldDiff->getLiftedV(bm), liftedIni);
+        auto flow = _rk->solveIterative(1.0, 1, _vecFieldDiff->getLiftedV(bm), liftedIni);
         for (int i = 0; i < Size; ++i) {
             tape.registerOutput(flow(i));
         }
@@ -144,8 +142,7 @@ public:
     }
 
 private:
-    std::unique_ptr<RungeKutta<double, R>> _rk;
-    std::unique_ptr<RungeKutta<codi::RealReverse, RD>> _rkDiff;
+    std::unique_ptr<RungeKutta<R>> _rk;
     std::unique_ptr<VectorField<double, Size>> _vecField;
     std::unique_ptr<VectorField<codi::RealReverse, Size>> _vecFieldDiff;
     int _numStepRk;
