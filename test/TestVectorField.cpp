@@ -14,12 +14,7 @@ public:
         _beta = 0.9;
         _rho = -0.7;
         _sabr = std::make_unique<sde::Sabr<double>>(_a, _b, _beta, _rho);
-
-        _sabrDiff = std::make_unique<sde::Sabr<codi::RealReverse>>(
-            codi::RealReverse(_a),
-            codi::RealReverse(_b),
-            codi::RealReverse(_beta),
-            codi::RealReverse(_rho));
+        _sabrDiff = std::make_unique<sde::Sabr<codi::RealReverse>>(_a,_b,_beta,_rho);
     }
 public:
     double _a;

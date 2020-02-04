@@ -6,8 +6,6 @@ namespace sde
 template <typename T, std::size_t Size>
 class VectorField {
 public:
-    using vector_type = sde::vector_type<T, Size>;
-    using lifted_type = sde::lifted_type<T, Size>;
 
     virtual ~VectorField() = default;
     virtual std::unique_ptr<VectorField<T, Size>> clone() const = 0;
@@ -49,11 +47,11 @@ public:
         return gamma;
     }
     
-    virtual std::vector<sde::func_ptr_type<lifted_type>>
+    std::vector<sde::func_ptr_type<sde::lifted_type<T, Size>>>
     getLiftedV(const sde::vector_type<double, Size>& bm) const
     {
         auto&& generateVecField = [this, &bm](int alpha){
-            auto&& vec = [this, &bm, alpha](const lifted_type& x){
+            auto&& vec = [this, &bm, alpha](const sde::lifted_type<T, Size>& x){
                 //u(0)=x1=x(0), u(1)=xSize=x(1), e(0,0)=e11=x(Size), e(0,1)=e1Size=x(3), e(1,0)=eSize1=x(4), e(1,1)=eSizeSize=x(5)
                 sde::vector_type<T, Size> u;
                 for (int i = 0; i < Size; ++i) {
@@ -77,7 +75,7 @@ public:
                     return ret;
                 };
 
-                lifted_type v;
+                sde::lifted_type<T, Size> v;
                 for (int i = 0; i < Size; ++i) {
                     v(i) = e(i, 0);
                 }
@@ -88,25 +86,25 @@ public:
                 }
                 //v << v0, v1, v00, v01, v10, v11;
                 //std::cout << "v = " << v << std::endl;
-                lifted_type w = bm(alpha) * v;
+                sde::lifted_type<T, Size> w = bm(alpha) * v;
                 //return x;
                 return w;
             };
             return vec;
         };
         
-        return std::vector<sde::func_ptr_type<lifted_type>>{
-            std::make_shared<sde::function_type<lifted_type>>(generateVecField(0)),
-            std::make_shared<sde::function_type<lifted_type>>(generateVecField(1))
+        return std::vector<sde::func_ptr_type<sde::lifted_type<T, Size>>>{
+            std::make_shared<sde::function_type<sde::lifted_type<T, Size>>>(generateVecField(0)),
+            std::make_shared<sde::function_type<sde::lifted_type<T, Size>>>(generateVecField(1))
         };
     }
 
-    sde::function_type<vector_type> getV0() const 
+    sde::function_type<sde::vector_type<T, Size>> getV0() const 
     {
-        auto&& vec0 = [this](const vector_type& x) {
+        auto&& vec0 = [this](const sde::vector_type<T, Size>& x) {
             auto&& gInv = calcGInv(x);
             auto&& gamma = calcGamma(x);
-            vector_type v;
+            sde::vector_type<T, Size> v;
             
             for (int i = 0; i < Size; ++i) {
                 for (int k = 0; k < Size; ++k) {

@@ -10,11 +10,11 @@ public:
     using vector_type = sde::vector_type<T, 2>;
     using lifted_type = sde::lifted_type<T, 2>;
  
-   Sabr(
-        const T& a,
-        const T& b,
-        const T& beta,
-        const T& rho)
+    Sabr(
+        double a,
+        double b,
+        double beta,
+        double rho)
     : _a(a), _b(b), _beta(beta), _rho(rho)
     {
     }
@@ -58,10 +58,10 @@ public:
     }
 
 private:
-    T _a;
-    T _b;
-    T _beta;
-    T _rho;
+    double _a;
+    double _b;
+    double _beta;
+    double _rho;
     constexpr static std::size_t _bmSize = 2;
     constexpr static std::size_t _stateSize = 2;
 };
