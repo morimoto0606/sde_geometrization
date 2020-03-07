@@ -11,16 +11,18 @@ public:
 
     virtual sde::vector_type<double, Size> evolve(
         const sde::vector_type<double, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const = 0;
+        const sde::vector_type<double, Size>& dB,
+        double dt) const = 0;
  
     sde::vector_type<double, Size> generateOnePath(
         std::size_t numSteps,
-        const Eigen::MatrixXd& bm,
+        const Eigen::MatrixXd& dB,
+        double dt,
         const sde::vector_type<double, Size>& ini) const
     {
         sde::vector_type<double, Size> x = ini;
         for (std::size_t i = 0; i < numSteps; ++i) {
-            x = this->evolve(x, bm.col(i));
+            x = this->evolve(x, dB.col(i), dt);
         }
         return x;
     }
@@ -32,13 +34,13 @@ public:
         const RndNormal& generator,
         const sde::vector_type<double, Size>& ini) const 
     {   
-        const double dt = maturity / numSteps;
-        Eigen::MatrixXd path(Size, pathNum);
+        const double dt = maturity / static_cast<double>(numSteps);
+        Eigen::MatrixXd path(pathNum, Size);
+        const std::vector<Eigen::MatrixXd>& normals = generator.get(pathNum , Size, numSteps);
         for (int p = 0; p < pathNum; ++p) {
-            const Eigen::MatrixXd& normal = generator.get(Size, numSteps);
-            const Eigen::MatrixXd& bm = sqrt(dt) * normal;
-            const sde::vector_type<double, Size>& x = this->generateOnePath(numSteps, bm, ini);
-            path.col(p) = x;
+            const Eigen::MatrixXd& dB = sqrt(dt) * normals[p];
+            const sde::vector_type<double, Size>& x = this->generateOnePath(numSteps, dB, dt, ini);
+            path.row(p) = x;
         }
         return path;
     }

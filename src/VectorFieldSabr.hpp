@@ -5,8 +5,8 @@ namespace sde
 {
 
 class Sabr : public VectorField<Sabr, 2> { 
-    
-    public: Sabr( double a, double b,
+    public: 
+    Sabr( double a, double b,
         double beta,
         double rho)
     : _a(a), _b(b), _beta(beta), _rho(rho)
@@ -33,6 +33,20 @@ class Sabr : public VectorField<Sabr, 2> {
     sde::Tensor<T, 2> calcGDiff(const sde::vector_type<T, 2>& x) const
     {
         sde::Tensor<T, 2> gDiff;
+        //const double epsilon = 0.0001;
+        //sde::vector_type<T, 2> xPlus = x;
+        //sde::vector_type<T, 2> xMinus = x;
+
+        //for (int k = 0; k < 2; ++k) {
+        //    xPlus(k) += epsilon;
+        //    xMinus(k) -= epsilon;
+        //    auto diff =(calcGInv(xPlus) - calcGInv(xMinus)) / (2. * epsilon);
+        //    for (int i = 0; i < 2; ++i) {
+        //        for (int j = 0; j < 2; ++j) {
+        //            gDiff(i, j, k) = diff(i, j);
+        //        }
+        //    }
+        //}
         const T nu = 1. - pow(_rho, 2.);
         gDiff(0,0,0) = -2. * _beta / (pow(_a, 2.) * nu) * pow(x(0), -2.*_beta -1) * pow(x(1), -2.);
         gDiff(0,0,1) = -2. / (pow(_a, 2.) * nu) * pow(x(0), -2.*_beta) * pow(x(1), -3.);

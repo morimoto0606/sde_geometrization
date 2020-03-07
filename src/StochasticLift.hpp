@@ -14,7 +14,7 @@ class StochasticLift : public Scheme<Size> {
 public:
     StochasticLift(
         const RungeKutta<R>& rk,
-        const VectorField<V, Size>& vecField,
+        const V& vecField,
         int numStepRk):
     _rk(rk.clone()),
     _vecField(vecField.clone()),
@@ -28,7 +28,6 @@ public:
         for (int i = 0; i < Size; ++i) {
             liftedIni(i) = ini(i);
         }
-        const auto id = Eigen::MatrixXd::Identity(Size, Size);
         auto vecField = _vecField->calcV(ini);
         for (int i = 0; i < Size; ++i) {
             for (int j = 0; j < Size; ++j) {
@@ -41,21 +40,23 @@ public:
     template <typename T>
     sde::vector_type<T, Size> evolveXi(
         const sde::vector_type<T, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const  
+        const sde::vector_type<double, Size>& dB) const  
     {
         /*
         dXi(t,x)j=sum_{i=1}^N V_i(Xi(t))dB^i(t)-1/2g^{kl}Gamma_{kl}^idt ,Xi(0)=x
         */
         auto liftedIni = this->getLiftedIni<T>(prev);
         auto liftedX
-            = _rk->solveIterative(1.0, _numStepRk, _vecField->template getLiftedV<T>(bm), liftedIni);
+            = _rk->solveIterative(1.0, _numStepRk, _vecField->template getLiftedV<T>(dB), liftedIni);
         auto x = liftedX(Eigen::seqN(0, Size));
         return x;
     }
  
-    Eigen::Matrix<double, Size, Size> evolveJacobiInv(
+    std::tuple<
+        sde::vector_type<double, Size>, 
+        Eigen::Matrix<double, Size, Size>> evolveJacobiInv(
         const sde::vector_type<double, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const  
+        const sde::vector_type<double, Size>& dB) const  
     {
         /*
         dX(t,x)j=sum_{i=1}^N V_i(X(t)) \cir dB^i(t),X(0)=x
@@ -68,64 +69,65 @@ public:
         for (int i = 0; i < Size; ++i) {
             tape.registerInput(liftedIni(i));
         }
-        auto flow = _rk->solveIterative(1.0, 1, _vecField->template getLiftedV<codi::RealReverse>(bm), liftedIni);
+        auto liftedFlow = _rk->solveIterative(1.0, 1, _vecField->template getLiftedV<codi::RealReverse>(dB), liftedIni);
         for (int i = 0; i < Size; ++i) {
-            tape.registerOutput(flow(i));
+            tape.registerOutput(liftedFlow(i));
         }
         tape.setPassive();
 
         Eigen::Matrix<double, Size, Size> jac;
         for (int i = 0; i < Size; ++i) {
-            flow(i).setGradient(1.0);
+            liftedFlow(i).setGradient(1.0);
             for (int j = 0; j < Size; ++j) {
                 tape.evaluate();
                 jac(i, j) = liftedIni(j).getGradient();
             }
             tape.clearAdjoints();
         }
- 
         tape.reset();
-        return jac.inverse();
+
+        auto&& jacInv = jac.inverse();
+        sde::vector_type<double, Size> flow;
+        for (int i = 0; i < Size; ++i) {
+            flow(i) = liftedFlow(i).getValue();
+        }
+        auto&& ret = std::make_tuple(std::move(flow), std::move(jacInv));
+        return ret;
     }
 
     sde::vector_type<double, Size> evolveZeta(
         const sde::vector_type<double, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const 
+        const sde::vector_type<double, Size>& dB,
+        double dt) const 
     {
-        const Eigen::Matrix<double, Size, Size> jacobi 
-            = this->evolveJacobiInv(prev, bm);
+
         const sde::function_type<sde::vector_type<double, Size>> v0
             = _vecField->template getV0<double>();
 
-        auto vecFieldZeta = [this, &bm, &jacobi, &v0](const sde::vector_type<double, Size>& x)
+        auto vecFieldZeta = [this, &dB, &v0](const sde::vector_type<double, Size>& x)
         {
-            const sde::lifted_type<double, Size> liftedIni
-                = this->getLiftedIni<double>(x);
-            const sde::lifted_type<double, Size> liftedFlow = _rk->solveIterative(
-                1.0,
-                _numStepRk, 
-                _vecField->template getLiftedV<double>(bm),
-                liftedIni);
-            const sde::vector_type<double, Size> flow = liftedFlow(Eigen::seqN(0, Size));
-            const sde::vector_type<double, Size> m = jacobi * v0(flow);
- 
+            const auto& y = this->evolveJacobiInv(x, dB);
+            const Eigen::Matrix<double, Size, Size>& jacobi = std::get<1>(y);
+            const sde::vector_type<double, Size>& flow = std::get<0>(y);
+            const sde::vector_type<double, Size>& m = jacobi * v0(flow);
             return m;
         };
         
         std::vector<sde::func_ptr_type<sde::vector_type<double, Size>>> 
         vecFieldZetaPtr{std::make_shared<sde::function_type<sde::vector_type<double, Size>>>(vecFieldZeta)};
 
-        auto zeta = _rk->solveIterative(1.0, _numStepRk, vecFieldZetaPtr, prev);
+        auto zeta = _rk->solveIterative(dt, _numStepRk, vecFieldZetaPtr, prev);
         return zeta;
     }
 
 
     sde::vector_type<double, Size> evolve(
         const sde::vector_type<double, Size>& prev,
-        const sde::vector_type<double, Size>& bm) const 
+        const sde::vector_type<double, Size>& dB,
+        double dt) const 
     {
-        const sde::vector_type<double, Size> zeta = this->evolveZeta(prev, bm);
-        return evolveXi(zeta, bm);
+        const sde::vector_type<double, Size> zeta = this->evolveZeta(prev, dB, dt);
+        return evolveXi(zeta, dB);
     }
 
 private:

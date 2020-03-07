@@ -54,6 +54,32 @@ public:
     const T& operator()(int i, int j, int k) const {
         return _data[k](i, j);
     }
+
+    Tensor operator +(const Tensor& other) const {
+        Tensor<T, Size> ret = *this;
+        for (int k = 0; k < Size; ++k) {
+            ret._data[k] += other._data[k];
+        }
+        return ret;
+    }
+    Tensor operator -(const Tensor& other) const {
+        Tensor<T, Size> ret = *this;
+        for (int k = 0; k < Size; ++k) {
+            ret._data[k] -= other._data[k];
+        }
+        return ret;
+    }
+
+    Tensor operator /(const double& other) const {
+        Tensor<T, Size> ret = *this;
+        for (int k = 0; k < Size; ++k) {
+            ret._data[k] /= other;
+        }
+        return ret;
+    }
+
+
+
 private:
     std::vector<Eigen::Matrix<T, Size, Size>> _data;
 };

@@ -17,7 +17,7 @@ public:
 
 TEST_F(RndNormalTest, MtNormal) {
     sde::MtNormal generator(_seed);
-    const auto rndNormal = generator.get(_dim, _size);
-    EXPECT_NEAR(0.0, rndNormal.mean(), 0.05);
-    std::cout << rndNormal.mean() << std::endl;
+    const auto rndNormal = generator.get(1, _dim, _size);
+    EXPECT_NEAR(0.0, rndNormal[0].mean(), 0.05);
+    std::cout << rndNormal[0].mean() << std::endl;
 }

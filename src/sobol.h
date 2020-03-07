@@ -8,8 +8,10 @@
 #include <math.h>
 #include <vector>
 #include <assert.h>
+#include <boost/math/distributions/normal.hpp>
+#include <Eigen/Core>
 
-double **sobol_points(unsigned N, unsigned D, const char *dir_file)
+inline double **sobol_points(unsigned N, unsigned D, const char *dir_file)
 {
   std::ifstream infile(dir_file,std::ios::in);
   if (!infile) {
@@ -103,40 +105,20 @@ double **sobol_points(unsigned N, unsigned D, const char *dir_file)
   return POINTS;
 }
 
-double **sobol_points(unsigned N, unsigned D) {
+inline double **sobol_points(unsigned N, unsigned D) {
   const char *dir_file = "../sobol_data/new-joe-kuo-6.21201";
   return sobol_points(N, D, dir_file);
 }
 
-std::vector<std::vector<double>> sobol_points_normal(unsigned N, unsigned D) {
-    assert(N % 2 == 0);
-    auto boxmullar = [](const double x, const double y){
-        const double r = std::sqrt(-2.0 * std::log(x));
-        const double z0 = r * std::cos(2.0 * M_PI * y);
-        const double z1 = r * std::sin(2.0 * M_PI * y);
-        return std::vector<double>{z0, z1};
-        //return std::vector<double>{x,y};
-    };
- 
-    const unsigned M = N / 2;
-    int k = 1;
-    const auto uniform = sobol_points(N + k, D);
-    std::vector<std::vector<double>> ret; //(N, std::vector<double>(D, 0.0));
-    for (int i =0; i< N; ++i) ret.push_back(std::vector<double>(D, 0.0));
-      
- 
-    for (unsigned i = 0; i < M; ++i) {
-       for (unsigned j =0; j < D; ++j) {
-            const unsigned odd = 2 * i;
-            const unsigned even = 2 * i + 1;
-            const auto x = uniform[odd+k][j];
-            const auto y = uniform[even+k][j];
- 
-            const std::vector<double> normal = boxmullar(x, y);
- 
-            ret[odd][j] = normal[0];
-            ret[even][j] = normal[1];
-        }
-    }
+inline Eigen::MatrixXd sobol_points_normal(unsigned N, unsigned D, int k) {
+    const auto uniform = sobol_points(N+k, D);
+    boost::math::normal_distribution<double> dist(0.0, 1.0);
+    Eigen::MatrixXd ret(N, D);
+    for (int i =0; i< N; ++i) {
+      for (int j = 0; j < D; ++j) {
+        double z = uniform[i+k][j];
+        ret(i, j) = quantile(dist, z);
+      }
+    } 
     return ret;
 }

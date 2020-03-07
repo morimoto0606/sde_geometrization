@@ -10,7 +10,7 @@ class SobolTest: public ::testing::Test {
 };
 
 TEST_F(SobolTest, sobol_points) {
-    int N = 10000;
+    int N = 10;
     int D = 3;
     auto rnd = sobol_points(N, D);
     EXPECT_DOUBLE_EQ(0.6875, rnd[9][0]);
@@ -32,12 +32,12 @@ TEST_F(SobolTest, sobol_points) {
 TEST_F(SobolTest, sobol_points_normal) {
     int N = 10000;
     int D = 2;
-    auto rnd = sobol_points_normal(N, D);
+    auto rnd = sobol_points_normal(N, D, 1);
     std::vector<double> samples0;
     std::vector<double> samples1;
     for (int i = 0; i < N; ++i) {
-        samples0.push_back(rnd[i][0]);
-        samples1.push_back(rnd[i][1]);
+        samples0.push_back(rnd(i, 0));
+        samples1.push_back(rnd(i, 1));
         //for (auto y : x) {
         //    //std::cout << y << " " ;
         //}

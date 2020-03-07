@@ -6,9 +6,11 @@
 class PricerTest : public ::testing::Test {
 public:
     void SetUp() override {
-        _path.resize(2, 4);
-        _path << 2.5, 1.4, 3.0, std::nan("1"),
-                0.1, 0.2, 0.3, std::nan("2");
+        _path.resize(4, 2);
+        _path << 2.5, 0.1,
+                1.4, 0.2,
+                3.0, 0.3, 
+                std::nan("1"), std::nan("2");
     }
 
     Eigen::MatrixXd _path;
@@ -16,7 +18,7 @@ public:
 
 TEST_F(PricerTest, sabrCall) {
 
-    auto und = _path.row(0);
+    auto und = _path.col(0);
     sde::vector_type<double, 4> expectedRow;
     expectedRow << 2.5, 1.4, 3.0, std::nan("1");
     for (int i = 0; i < 3; ++i) {
@@ -27,7 +29,7 @@ TEST_F(PricerTest, sabrCall) {
     auto pay = und.array() - strike;
     sde::vector_type<double, 4> expectedPay;
     expectedPay << 0.5, -0.6, 1.0, std::nan("1");
-     for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         EXPECT_DOUBLE_EQ(expectedPay(i), pay(i));
     }
 

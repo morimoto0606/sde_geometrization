@@ -33,23 +33,23 @@ TEST_F(VecFieldTest, getV0Diff) {
     auto f = _sabrDiff->getV0<codi::RealReverse>();
 }
 
-TEST_F(VecFieldTest, getLiftedV) {
-    sde::vector_type<double, 2> bm;
-    bm << -0.32, 0.23;
-    auto vecFields = _sabr->getLiftedV<double>(bm);
-    sde::lifted_type<double, 2> x;
-    x << 1.0, 0.3, 1, 0, 0, 1;
-    sde::lifted_type<double, 2> y0 = (*vecFields[0])(x);
-    sde::lifted_type<double, 2> y1 = (*vecFields[1])(x);
-
-    std::cout << "getLiftedV 0 = " << y0 << std::endl;
-    std::cout << "getLiftedV 1 = " << y1 << std::endl;
-
-}
+//TEST_F(VecFieldTest, getLiftedV) {
+//    sde::vector_type<double, 2> dB;
+//    dB << -0.32, 0.23;
+//    auto vecFields = _sabr->getLiftedV<double>(dB);
+//    sde::lifted_type<double, 2> x;
+//    x << 1.0, 0.3, 1, 0, 0, 1;
+//    sde::lifted_type<double, 2> y0 = (*vecFields[0])(x);
+//    sde::lifted_type<double, 2> y1 = (*vecFields[1])(x);
+//
+//    std::cout << "getLiftedV 0 = " << y0 << std::endl;
+//    std::cout << "getLiftedV 1 = " << y1 << std::endl;
+//
+//}
 
 
 TEST_F(VecFieldTest, getLiftedVDiff) {
-    sde::vector_type<double, 2> bm;
-    bm << -0.32, 0.23;
-    auto vecFields = _sabrDiff->getLiftedV<codi::RealReverse>(bm);
+    sde::vector_type<double, 2> dB;
+    dB << -0.32, 0.23;
+    auto vecFields = _sabrDiff->getLiftedV<codi::RealReverse>(dB);
 }
